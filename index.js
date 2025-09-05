@@ -192,12 +192,15 @@ const stage3Questions = [
     ]},
 ];
 
+
 // ====================== Quiz Logic ======================
 const questionElement = document.getElementById("question");
 const answerButtons = document.getElementById("answer-buttons");
 const nextButton = document.getElementById("next-btn");
+const startButton = document.getElementById("start-btn");
 const stageElement = document.getElementById("stage");
 const timerElement = document.getElementById("timer");
+const stageTimer = document.getElementById("stage-timer");
 
 // Combine all stage questions
 const allQuestions = [...stage1Questions, ...stage2Questions, ...stage3Questions];
@@ -208,8 +211,19 @@ let currentQuestionIndex = 0;
 let score = 0;
 let stageScores = {1:0,2:0,3:0,4:0};
 let timer;
-let timeLeft = 120; // 2 minutes per stage
-let stageFinished = false; // Flag to track if stage ended
+let timeLeft = 120;
+let stageFinished = false;
+
+// Start Quiz Button
+startButton.addEventListener("click", () => {
+    startButton.style.display = "none";
+    stageTimer.style.display = "flex";
+    questionElement.style.display = "block";
+    answerButtons.style.display = "block";
+    nextButton.style.display = "none";
+
+    startStage(1);
+});
 
 // Start a stage
 function startStage(stage){
@@ -223,9 +237,7 @@ function startStage(stage){
         case 1: currentQuestions = stage1Questions; break;
         case 2: currentQuestions = stage2Questions; break;
         case 3: currentQuestions = stage3Questions; break;
-        case 4:
-            currentQuestions = getRandomQuestions(10); // Stage 4 Random
-            break;
+        case 4: currentQuestions = getRandomQuestions(10); break;
     }
 
     nextButton.innerHTML = "Next";
@@ -239,12 +251,20 @@ function getRandomQuestions(n){
     return shuffled.slice(0, n);
 }
 
+// Shuffle answers
+function shuffleAnswers(answers) {
+    return [...answers].sort(() => Math.random() - 0.5);
+}
+
 function showQuestion(){
     resetState();
     let currentQuestion = currentQuestions[currentQuestionIndex];
     stageElement.innerHTML = `Stage ${currentStage} - ${getStageName(currentStage)}`;
     questionElement.innerHTML = `Q${currentQuestionIndex+1}: ${currentQuestion.question}`;
-    currentQuestion.answers.forEach(answer=>{
+
+    const shuffledAnswers = shuffleAnswers(currentQuestion.answers);
+
+    shuffledAnswers.forEach(answer=>{
         const button = document.createElement("button");
         button.innerHTML = answer.text;
         button.classList.add("btn");
@@ -262,7 +282,7 @@ function resetState(){
 }
 
 function selectAnswer(e){
-    if(stageFinished) return; // Prevent selecting after stage ends
+    if(stageFinished) return;
     const selectedBtn = e.target;
     const isCorrect = selectedBtn.dataset.correct === "true";
     if(isCorrect){
@@ -281,7 +301,7 @@ function selectAnswer(e){
 
 function showScore(timeUp=false){
     resetState();
-    stageFinished = true; // Mark stage as finished
+    stageFinished = true;
     if(timeUp){
         questionElement.innerHTML = `⏰ Time's up for Stage ${currentStage}! <br> You scored ${score} out of ${currentQuestions.length}`;
     } else {
@@ -289,7 +309,6 @@ function showScore(timeUp=false){
     }
     clearInterval(timer);
 
-    // Save score
     stageScores[currentStage] = score;
 
     if(currentStage < 4){
@@ -351,7 +370,7 @@ function handleNextButton(){
     }
 }
 
-// Next button logic
+// Next button listener with reset for Restart Quiz
 nextButton.addEventListener("click", ()=>{
     if(currentQuestionIndex < currentQuestions.length && !stageFinished){
         handleNextButton();
@@ -360,19 +379,18 @@ nextButton.addEventListener("click", ()=>{
         showSummary();
         currentStage++;
     }
-    else if(currentStage > 4){
-        stageScores = {1:0,2:0,3:0,4:0};
-        startStage(1); // Restart quiz
+    else if(nextButton.innerHTML === "Restart Quiz"){
+        resetQuizToStart();
     } 
     else if(stageFinished){
-        startStage(currentStage + 1); // Move to next stage
+        startStage(currentStage + 1);
     }
 });
 
 // Timer
 function startTimer(){
     clearInterval(timer);
-    timeLeft = 120; // reset timer
+    timeLeft = 120;
     timerElement.innerHTML = formatTime(timeLeft);
 
     timer = setInterval(()=>{
@@ -380,7 +398,7 @@ function startTimer(){
         timerElement.innerHTML = formatTime(timeLeft);
         if(timeLeft <= 0){
             clearInterval(timer);
-            showScore(true); // true means time ran out
+            showScore(true);
         }
     }, 1000);
 }
@@ -400,4 +418,18 @@ function getStageName(stage){
     }
 }
 
-startStage(1);
+// Reset Quiz to initial state with only Start button
+function resetQuizToStart() {
+    stageTimer.style.display = "none";
+    questionElement.style.display = "none";
+    answerButtons.style.display = "none";
+    nextButton.style.display = "none";
+
+    startButton.innerHTML = "Start Quiz";
+    startButton.style.display = "block";
+
+    stageScores = {1:0,2:0,3:0,4:0};
+    currentStage = 1;
+    currentQuestionIndex = 0;
+    score = 0;
+}
